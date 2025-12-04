@@ -1,42 +1,41 @@
-# Developing a Neural Network Regression Model
+# Developing a Neural Network Classification Model
 
 ## AIM
-To develop a neural network regression model for the given dataset.
+To develop a neural network classification model for the given dataset.
 
 ## THEORY
-Regression problems involve predicting a continuous output variable based on input features. Traditional linear regression models often struggle with complex patterns in data. Neural networks, specifically feedforward neural networks, can capture these complex relationships by using multiple layers of neurons and activation functions. In this experiment, a neural network model is introduced with a single linear layer that learns the parameters weight and bias using gradient descent.
+The Iris dataset consists of 150 samples from three species of iris flowers (Iris setosa, Iris versicolor, and Iris virginica). Each sample has four features: sepal length, sepal width, petal length, and petal width. The goal is to build a neural network model that can classify a given iris flower into one of these three species based on the provided features.
 
 ## Neural Network Model
 Include the neural network model diagram.
 
 ## DESIGN STEPS
-### STEP 1: Generate Dataset
+### STEP 1: 
 
-Create input values  from 1 to 50 and add random noise to introduce variations in output values .
+Load the Iris dataset using a suitable library.
 
-### STEP 2: Initialize the Neural Network Model
+### STEP 2: 
 
-Define a simple linear regression model using torch.nn.Linear() and initialize weights and bias values randomly.
+Preprocess the data by handling missing values and normalizing features.
 
-### STEP 3: Define Loss Function and Optimizer
+### STEP 3: 
 
-Use Mean Squared Error (MSE) as the loss function and optimize using Stochastic Gradient Descent (SGD) with a learning rate of 0.001.
+Split the dataset into training and testing sets.
 
-### STEP 4: Train the Model
+### STEP 4: 
 
-Run the training process for 100 epochs, compute loss, update weights and bias using backpropagation.
+Train a classification model using the training data.
 
-### STEP 5: Plot the Loss Curve
 
-Track the loss function values across epochs to visualize convergence.
+### STEP 5: 
 
-### STEP 6: Visualize the Best-Fit Line
+Evaluate the model on the test data and calculate accuracy.
 
-Plot the original dataset along with the learned linear model.
+### STEP 6: 
 
-### STEP 7: Make Predictions
+Display the test accuracy, confusion matrix, and classification report.
 
-Use the trained model to predict  for a new input value .
+
 
 ## PROGRAM
 
@@ -47,116 +46,171 @@ Use the trained model to predict  for a new input value .
 ```python
 import torch
 import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from torch.utils.data import TensorDataset, DataLoader
+import seaborn as sns
 import matplotlib.pyplot as plt
-%matplotlib inline
-
-X = torch.linspace(1,70,70).reshape(-1,1)
-
-torch.manual_seed(71)
-e = torch.randint(-8,9,(70,1),dtype=torch.float)
-
-y = 2*X + 1 + e
-print(y.shape)
-
-plt.scatter(X.numpy(), y.numpy(),color='red')
-plt.xlabel('x')
-plt.ylabel('y')
-plt.title('Generated Data for Linear Regression')
-plt.show()
+from sklearn.datasets import load_iris
 
 
-torch.manual_seed(59)
+# Load Iris dataset
+iris = load_iris()
+X = iris.data  # Features
+y = iris.target  # Labels (already numerical)
 
 
-class Model(nn.Module):
-    def __init__(self, in_features, out_features):
-        super().__init__()
-        self.linear = nn.Linear(in_features, out_features)
+
+# Convert to DataFrame for easy inspection
+df = pd.DataFrame(X, columns=iris.feature_names)
+df['target'] = y
+
+
+# Display first and last 5 rows
+print("First 5 rows of dataset:\n", df.head())
+print("\nLast 5 rows of dataset:\n", df.tail())
+
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+# Standardize features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+
+# Convert to PyTorch tensors
+X_train = torch.tensor(X_train, dtype=torch.float32)
+X_test = torch.tensor(X_test, dtype=torch.float32)
+y_train = torch.tensor(y_train, dtype=torch.long)
+y_test = torch.tensor(y_test, dtype=torch.long)
+
+
+# Create DataLoader
+train_dataset = TensorDataset(X_train, y_train)
+test_dataset = TensorDataset(X_test, y_test)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=16)
+
+
+# Define Neural Network Model
+class IrisClassifier(nn.Module):
+    def __init__(self, input_size):
+        super(IrisClassifier, self).__init__()
+        #Include your code here
+        self.fc1 =nn.Linear(input_size,16)
+        self.fc2 =nn.Linear(16,8)
+        self.fc3 =nn.Linear(8,3)
+
+
 
     def forward(self, x):
-        y_pred = self.linear(x)
-        return y_pred
+        #Include your code here
+        x=F.relu(self.fc1(x))
+        x=F.relu(self.fc2(x))
+        return self.fc3(x)
+
+# Training function
+def train_model(model, train_loader, criterion, optimizer, epochs):
+     #Include your code here
+      for epoch in range(epochs):
+        model.train()
+        for X_batch, y_batch in train_loader:
+            optimizer.zero_grad()
+            outputs = model(X_batch)
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
+        if (epoch + 1) % 10 == 0:
+            print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
 
 
-torch.manual_seed(59)
-model = Model(1, 1)
-print('Weight:', model.linear.weight.item())
-print('Bias:  ', model.linear.bias.item())
-
-loss_function = nn.MSELoss()
-
-optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
-
-epochs = 50
-losses = []
-
-for epoch in range(1, epochs + 1):
-    optimizer.zero_grad()
-    y_pred = model(X)
-    loss = loss_function(y_pred, y)
-    losses.append(loss.item())
-
-    loss.backward()
-    optimizer.step()
+# Initialize model, loss function, and optimizer
+model =IrisClassifier(input_size=X_train.shape[1])
+criterion =nn.CrossEntropyLoss()
+optimizer =optim.Adam(model.parameters(), lr=0.001)
 
 
-    print(f'epoch: {epoch:2}  loss: {loss.item():10.8f}  '
-          f'weight: {model.linear.weight.item():10.8f}  '
-          f'bias: {model.linear.bias.item():10.8f}')
+# Train the model
+train_model(model, train_loader, criterion, optimizer, epochs=100)
 
-plt.plot(range(epochs), losses)
-plt.ylabel('Loss')
-plt.xlabel('epoch');
+
+# Evaluate the model
+model.eval()
+predictions, actuals = [], []
+with torch.no_grad():
+    for X_batch, y_batch in test_loader:
+        outputs = model(X_batch)
+        _, predicted = torch.max(outputs, 1)
+        predictions.extend(predicted.numpy())
+        actuals.extend(y_batch.numpy())
+
+
+# Compute metrics
+accuracy = accuracy_score(actuals, predictions)
+conf_matrix = confusion_matrix(actuals, predictions)
+class_report = classification_report(actuals, predictions, target_names=iris.target_names)
+
+# Print details
+print("\nName: GANJI MUNI MADHURI")
+print("Register No: 212223230060")
+print(f'Test Accuracy: {accuracy:.2f}%')
+print("Confusion Matrix:\n", conf_matrix)
+print("Classification Report:\n", class_report)
+
+# Plot confusion matrix
+plt.figure(figsize=(6, 5))
+sns.heatmap(conf_matrix, annot=True, cmap='Blues', xticklabels=iris.target_names, yticklabels=iris.target_names, fmt='g')
+plt.xlabel("Predicted Labels")
+plt.ylabel("True Labels")
+plt.title("Confusion Matrix")
 plt.show()
 
 
-x1 = torch.tensor([X.min().item(), X.max().item()])
+# Make a sample prediction
+sample_input = X_test[5].unsqueeze(0)  # Removed unnecessary .clone()
+with torch.no_grad():
+    output = model(sample_input)
+    predicted_class_index = torch.argmax(output[0]).item()
+    predicted_class_label = iris.target_names[predicted_class_index]
+
+print("\nName: GANJI MUNI MADHURI")
+print("Register No: 212223230060")
+print(f'Predicted class for sample input: {predicted_class_label}')
+print(f'Actual class for sample input: {iris.target_names[y_test[5].item()]}')
 
 
-w1, b1 = model.linear.weight.item(), model.linear.bias.item()
-
-
-y1 = x1 * w1 + b1
-
-
-print(f'Final Weight: {w1:.8f}, Final Bias: {b1:.8f}')
-print(f'X range: {x1.numpy()}')
-print(f'Predicted Y values: {y1.numpy()}')
-
-
-plt.scatter(X.numpy(), y.numpy(), label="Original Data")
-plt.plot(x1.numpy(), y1.numpy(), 'r', label="Best-Fit Line")
-plt.xlabel('x')
-plt.ylabel('y')
-plt.title('Trained Model: Best-Fit Line')
-plt.legend()
-plt.show()
 
 
 ```
 
 ### Dataset Information
-
-<img width="571" height="455" alt="image" src="https://github.com/user-attachments/assets/f601fa65-88b5-4b81-a17e-c48f277eeb40" />
+<img width="861" height="638" alt="image" src="https://github.com/user-attachments/assets/ba4ff44b-b2c8-4d2a-bb02-834a3a5c1b2b" />
 
 
 ### OUTPUT
-Training Loss Vs Iteration Plot
 
-<img width="580" height="432" alt="image" src="https://github.com/user-attachments/assets/b840fbd1-2e54-4e93-be32-dca5828fa1c2" />
+## Confusion Matrix
 
+<img width="632" height="589" alt="image" src="https://github.com/user-attachments/assets/4c8140fd-4fea-4bbd-8383-5aa855de59d7" />
 
-Best Fit line plot
+## Classification Report
 
-<img width="571" height="455" alt="image" src="https://github.com/user-attachments/assets/f8879903-b158-468a-8760-28d56e6edecc" />
+<img width="564" height="230" alt="image" src="https://github.com/user-attachments/assets/af6aadbb-e149-4eba-8964-047f82293650" />
 
 
 ### New Sample Data Prediction
 
+<img width="407" height="112" alt="image" src="https://github.com/user-attachments/assets/15d62655-9003-4236-97bb-50b1e97dd1b8" />
 
-<img width="722" height="63" alt="image" src="https://github.com/user-attachments/assets/10815000-cf91-4786-8bc4-d4e711255fb1" />
 
 
 ## RESULT
-Thus, a neural network regression model was successfully developed and trained using PyTorch.
+To develop a neural network classification model for the given dataset is successfully excecuted.
